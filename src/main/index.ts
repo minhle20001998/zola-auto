@@ -314,21 +314,79 @@ ipcMain.handle(IPC.runStop, async () => {
 })
 
 ipcMain.handle(IPC.updaterCheck, async () => {
+  debugLog('[updaterCheck] invoked', `isPackaged=${app.isPackaged} version=${app.getVersion()}`)
   if (!app.isPackaged) {
     const win = BrowserWindow.getAllWindows()[0]
     win?.webContents.send(IPC.updaterEvent, { type: 'error', message: 'Not packaged — updates only work in built exe (dist/*.exe)' })
     win?.webContents.send(IPC.runLog, { level: 'info', at: new Date().toISOString(), message: 'Updater: not packaged — skip (only works in built exe)' })
     return { ok: true, note: 'not packaged — skip' }
   }
-  const { autoUpdater } = await import('electron-updater')
-  await autoUpdater.checkForUpdates().catch((e) => {
-    const win = BrowserWindow.getAllWindows()[0]
-    win?.webContents.send(IPC.updaterEvent, { type: 'error', message: String(e) })
-  })
+  const win = BrowserWindow.getAllWindows()[0]
+  win?.webContents.send(IPC.updaterEvent, { type: 'checking-for-update' })
+  win?.webContents.send(IPC.runLog, { level: 'info', at: new Date().toISOString(), message: `[updater] manual check started — version ${app.getVersion()}` })
+  try {
+    const mod: unknown = await import('electron-updater')
+    const autoUpdater = (mod as { autoUpdater?: unknown }).autoUpdater
+      ?? (mod as { default?: { autoUpdater?: unknown } }).default?.autoUpdater
+      ?? (mod as { default?: unknown }).default as unknown
+    if (!autoUpdater || typeof (autoUpdater as { checkForUpdates?: unknown }).checkForUpdates !== 'function') {
+      throw new Error(`autoUpdater not found in electron-updater module: keys=${Object.keys(mod as object).join(',')}`)
+    }
+    const au = autoUpdater as import('electron-updater').autoUpdater
+    // ensure listeners exist even if setupUpdater was skipped for any reason
+    const send = (payload: unknown) => {
+      debugLog('[updaterCheck] event', JSON.stringify(payload).slice(0, 2000))
+      win?.webContents.send(IPC.updaterEvent, payload)
+      win?.webContents.send(IPC.runLog, { level: (payload as { type: string }).type === 'error' ? 'error' : 'info', at: new Date().toISOString(), message: `[updater] ${JSON.stringify(payload).slice(0, 1500)}` })
+    }
+    // attach one-shot timeout so UI never hangs on "Checking..."
+    let settled = false
+    const t = setTimeout(() => {
+      if (!settled) {
+        const msg = 'Check timed out after 30s — no response. Likely: app-update.yml missing, network blocked, or GitHub 404/rate-limit. Open debug.log for details.'
+        debugLog('[updaterCheck] timeout', msg)
+        send({ type: 'error', message: msg })
+      }
+    }, 30_000)
+    // make sure error listener exists — use on/once safely
+    const once = (ev: string, fn: (...args: unknown[]) => void) => {
+      const target = au as unknown as { once?: unknown; on?: unknown }
+      if (typeof target.once === 'function') (target.once as (e: string, f: (...a: unknown[])=>void)=>void)(ev, fn)
+      else if (typeof target.on === 'function') (target.on as (e: string, f: (...a: unknown[])=>void)=>void)(ev, fn)
+    }
+    once('error', (err) => {
+      settled = true
+      clearTimeout(t)
+      const msg = err instanceof Error ? `${err.message}\n${err.stack ?? ''}` : String(err)
+      debugLog('[updaterCheck] error event', msg)
+      send({ type: 'error', message: msg })
+    })
+    once('update-available', () => { settled = true; clearTimeout(t) })
+    once('update-not-available', () => { settled = true; clearTimeout(t) })
+    once('update-downloaded', () => { settled = true; clearTimeout(t) })
+
+    await au.checkForUpdates().then((r) => {
+      debugLog('[updaterCheck] checkForUpdates resolved', JSON.stringify(r).slice(0, 2000))
+    }).catch((e) => {
+      settled = true
+      clearTimeout(t)
+      const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e)
+      debugLog('[updaterCheck] checkForUpdates rejected', msg)
+      send({ type: 'error', message: msg })
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e)
+    debugLog('[updaterCheck] fatal', msg)
+    win?.webContents.send(IPC.updaterEvent, { type: 'error', message: msg })
+    win?.webContents.send(IPC.runLog, { level: 'error', at: new Date().toISOString(), message: `[updater] fatal: ${msg}` })
+  }
   return { ok: true }
 })
 ipcMain.handle(IPC.updaterQuitAndInstall, async () => {
-  const { autoUpdater } = await import('electron-updater')
+  const mod: unknown = await import('electron-updater')
+  const autoUpdater = (mod as { autoUpdater?: unknown }).autoUpdater
+    ?? (mod as { default?: { autoUpdater?: unknown } }).default?.autoUpdater
+    ?? (mod as { default?: unknown }).default as unknown as import('electron-updater').autoUpdater
   autoUpdater.quitAndInstall()
 })
 

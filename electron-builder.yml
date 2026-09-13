@@ -26,6 +26,7 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
+afterPack: scripts/afterPack.js
 publish:
   provider: github
   owner: minhle20001998

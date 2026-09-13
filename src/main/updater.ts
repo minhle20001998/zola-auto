@@ -1,33 +1,77 @@
 import { app, BrowserWindow } from 'electron'
 import { IPC } from '../shared/ipc'
+import { debugLog } from './logger'
 
 export function setupUpdater(): void {
   const send = (payload: unknown) => {
+    debugLog('[updater] event', JSON.stringify(payload).slice(0, 2000))
     const win = BrowserWindow.getAllWindows()[0]
     win?.webContents.send(IPC.updaterEvent, payload)
+    // also mirror to run:log so Logs card always shows it
+    win?.webContents.send(IPC.runLog, {
+      level: (payload as { type: string }).type === 'error' ? 'error' : 'info',
+      at: new Date().toISOString(),
+      message: `[updater] ${JSON.stringify(payload).slice(0, 1500)}`
+    })
   }
 
   if (!app.isPackaged) {
-    // In dev, still set up a no-op so the UI doesn't hang on "Checking..."
+    debugLog('[updater] not packaged — skip auto check')
     console.log('[updater] not packaged — skip auto check')
     return
   }
 
   import('electron-updater')
-    .then(({ autoUpdater }) => {
+    .then((mod: unknown) => {
+      const autoUpdater = (mod as { autoUpdater?: unknown }).autoUpdater
+        ?? (mod as { default?: { autoUpdater?: unknown } }).default?.autoUpdater
+        ?? (mod as { default?: unknown }).default as unknown as import('electron-updater').autoUpdater
+      if (!autoUpdater || typeof (autoUpdater as { checkForUpdates?: unknown }).checkForUpdates !== 'function') {
+        throw new Error(`autoUpdater not found: keys=${Object.keys(mod as object).join(',')}`)
+      }
       autoUpdater.autoDownload = true
       autoUpdater.autoInstallOnAppQuit = false
+      autoUpdater.logger = null as unknown as typeof autoUpdater.logger // we use debugLog instead
 
+      debugLog('[updater] setupUpdater — listeners attached, calling checkForUpdates()', `version=${app.getVersion()} resourcesPath=${process.resourcesPath}`)
       autoUpdater.on('checking-for-update', () => send({ type: 'checking-for-update' }))
       autoUpdater.on('update-available', (info) => send({ type: 'update-available', info }))
       autoUpdater.on('update-not-available', (info) => send({ type: 'update-not-available', info }))
       autoUpdater.on('download-progress', (p) => send({ type: 'download-progress', progress: p }))
       autoUpdater.on('update-downloaded', (info) => send({ type: 'update-downloaded', info }))
-      autoUpdater.on('error', (err) => send({ type: 'error', message: String(err) }))
-
-      void autoUpdater.checkForUpdates().catch((e) => {
-        send({ type: 'error', message: String(e) })
+      autoUpdater.on('error', (err) => {
+        const msg = err instanceof Error ? `${err.message}\n${err.stack ?? ''}` : String(err)
+        debugLog('[updater] error event', msg)
+        send({ type: 'error', message: msg })
       })
+
+      // startup auto-check — never let it hang silently
+      let settled = false
+      const t = setTimeout(() => {
+        if (!settled) {
+          const msg = 'Startup check timed out after 30s — no response from GitHub (network blocked, app-update.yml missing, or GitHub rate-limit). See debug.log'
+          debugLog('[updater] startup timeout', msg)
+          send({ type: 'error', message: msg })
+        }
+      }, 30_000)
+      void autoUpdater
+        .checkForUpdates()
+        .then((r) => {
+          settled = true
+          clearTimeout(t)
+          debugLog('[updater] checkForUpdates resolved', JSON.stringify(r).slice(0, 2000))
+        })
+        .catch((e) => {
+          settled = true
+          clearTimeout(t)
+          const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e)
+          debugLog('[updater] checkForUpdates rejected', msg)
+          send({ type: 'error', message: msg })
+        })
     })
-    .catch(() => {})
+    .catch((e) => {
+      const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e)
+      debugLog('[updater] import failed', msg)
+      send({ type: 'error', message: msg })
+    })
 }

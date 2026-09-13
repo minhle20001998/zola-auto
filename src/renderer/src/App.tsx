@@ -101,12 +101,33 @@ export default function App() {
     })
     const offUpd = window.api.on('updater:event', (...args: unknown[]) => {
       const e = args[0] as { type: string; progress?: { percent?: number }; info?: unknown; message?: string }
-      if (e.type === 'checking-for-update') setUpdaterMsg('Checking for updates...')
-      if (e.type === 'update-available') setUpdaterMsg('Update available — downloading...')
-      if (e.type === 'download-progress') setUpdaterMsg(`Downloading ${Math.round(e.progress?.percent ?? 0)}%`)
-      if (e.type === 'update-downloaded') { setUpdaterMsg('Update ready — restart to install'); setUpdateReady(true) }
-      if (e.type === 'update-not-available') setUpdaterMsg('')
-      if (e.type === 'error') setUpdaterMsg(`Updater: ${e.message ?? 'error'}`)
+      if (e.type === 'checking-for-update') {
+        setUpdaterMsg('Checking for updates...')
+        setLog((l) => [...l.slice(-500), 'Checking for updates...'])
+      }
+      if (e.type === 'update-available') {
+        setUpdaterMsg('Update available — downloading...')
+        setLog((l) => [...l.slice(-500), 'Update available — downloading...'])
+      }
+      if (e.type === 'download-progress') {
+        const pct = Math.round(e.progress?.percent ?? 0)
+        setUpdaterMsg(`Downloading ${pct}%`)
+      }
+      if (e.type === 'update-downloaded') {
+        setUpdaterMsg('Update ready — restart to install')
+        setUpdateReady(true)
+        setLog((l) => [...l.slice(-500), 'Update ready — restart to install'])
+      }
+      if (e.type === 'update-not-available') {
+        setUpdaterMsg('This version is latest')
+        setLog((l) => [...l.slice(-500), 'This version is latest'])
+        setTimeout(() => setUpdaterMsg(''), 4000)
+      }
+      if (e.type === 'error') {
+        const msg = e.message ?? 'error'
+        setUpdaterMsg(`Updater: ${msg}`)
+        setLog((l) => [...l.slice(-500), `Updater error: ${msg}`])
+      }
     })
     return () => { offLog(); offPick(); offConfirm(); offProg(); offDone(); offUpd() }
   }, [])
@@ -293,7 +314,6 @@ export default function App() {
                   onClick={() => {
                     setUserMenuOpen(false)
                     window.api.updaterCheck()
-                    setLog((l) => [...l, 'Checking for updates...'])
                   }}
                   className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent"
                 >
