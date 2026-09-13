@@ -1,0 +1,32 @@
+appId: com.zaloauto.app
+productName: zalo-auto
+forceCodeSigning: false
+directories:
+  output: dist
+files:
+  - out/**
+  - '!**/*.map'
+asarUnpack:
+  - "**/node_modules/playwright-core/.local-browsers/**"
+extraResources:
+  - from: resources/selectors.json
+    to: selectors.json
+  - from: resources/icon.png
+    to: icon.png
+  - from: resources/icon.ico
+    to: icon.ico
+win:
+  icon: resources/icon.ico
+  sign: null
+  signAndEditExecutable: false
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+publish:
+  provider: github
+  owner: placeholder-owner
+  repo: zalo-auto

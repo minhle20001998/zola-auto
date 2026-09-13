@@ -1,0 +1,10 @@
+node_modules
+out
+dist
+reports
+.playwright
+*.log
+.DS_Store
+test
+raw-requirement.md
+planning

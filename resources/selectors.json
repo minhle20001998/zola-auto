@@ -1,0 +1,33 @@
+{
+  "_comment": "Zalo DOM selectors — edit this file to fix broken selectors without rebuilding. Each entry can be a CSS string or an object with { by, value, selector }. `by` can be id, data-id, class, css. Loader builds the CSS selector from by/value if selector is not provided.",
+  "login": {
+    "qrCanvas": { "selector": "canvas, img[alt*=\"QR\" i]", "by": "css", "value": "canvas, img[alt*=\"QR\" i]", "description": "QR code canvas/image on login page" },
+    "loginUrlHint": { "selector": "/login", "by": "url", "value": "/login", "description": "URL substring that indicates login page" }
+  },
+  "app": {
+    "searchInput": { "selector": "#contact-search-input", "by": "id", "value": "contact-search-input", "description": "Main search input" },
+    "loggedInRoot": { "selector": "#contact-search-input, #searchResultList, [data-id=\"chat-root\"]", "by": "css", "value": "#contact-search-input, #searchResultList", "description": "Element visible when logged in" }
+  },
+  "search": {
+    "input": { "selector": "#contact-search-input", "by": "id", "value": "contact-search-input", "description": "Search input (same as app.searchInput)" },
+    "resultsContainer": { "selector": "#searchResultList", "by": "id", "value": "searchResultList", "description": "Container for search results" },
+    "resultRow": { "selector": "#searchResultList [id^=\"friend-item-\"], #searchResultList .conv-item", "by": "css", "value": "#searchResultList [id^=\"friend-item-\"]", "description": "Single search result row (friend-item)" },
+    "resultName": { "selector": ".conv-item-title__name, .truncate", "by": "class", "value": "conv-item-title__name", "description": "Name inside result row" },
+    "resultSubtitle": { "selector": ".txt-highlight, .friend_online_status, .item-message", "by": "class", "value": "txt-highlight", "description": "Subtitle/phone inside result row" },
+    "emptyMarker": { "selector": ".item-search__title", "by": "class", "value": "item-search__title", "description": "Empty/no-result marker" }
+  },
+  "chat": {
+    "headerName": { "selector": "#header-title, [class*=\"header\"] [class*=\"name\"], .conv-title, .header-title", "by": "css", "value": "#header-title", "description": "Chat header name" },
+    "composer": { "selector": "#richInput, [contenteditable=\"true\"], div[role=\"textbox\"], #input_line_0", "by": "id", "value": "richInput", "description": "Message composer" },
+    "sendButton": { "selector": "button:has-text(\"Gửi\"), [data-id*=\"Send\"], [icon*=\"Send\"], [class*=\"send\"] button, button[type=\"submit\"]", "by": "css", "value": "button:has-text(\"Gửi\")", "description": "Send button" },
+    "attachButton": { "selector": ".fa-Photo_24_Line, .fa-Attach_24_Line, [icon*=\"Photo\"], [icon*=\"Attach\"], [data-id*=\"Attach\"], [data-id*=\"Photo\"]", "by": "class", "value": "fa-Photo_24_Line", "description": "Attach/photo button" },
+    "fileInput": { "selector": "input[type=\"file\"]", "by": "css", "value": "input[type=\"file\"]", "description": "Hidden file input" },
+    "attachmentPreview": { "selector": "[class*=\"preview\"], [class*=\"attachment\"], [class*=\"image-preview\"], img[src^=\"blob:\"]", "by": "css", "value": "img[src^=\"blob:\"]", "description": "Image preview after attach" },
+    "outgoingBubble": { "selector": "[data-id*=\"SentMsg\"], [id^=\"image-mCntr\"], .chatImageMessage--audit, [data-id*=\"Sent\"]", "by": "data-id", "value": "SentMsg", "description": "Outgoing message bubble after send" }
+  },
+  "settings": {
+    "cogButton": { "selector": "[data-id=\"div_Main_TabSetting\"]", "by": "data-id", "value": "div_Main_TabSetting", "description": "Settings cog in sidebar" },
+    "logoutItem": { "selector": "[data-id=\"div_TabSetting_Logout\"]", "by": "data-id", "value": "div_TabSetting_Logout", "description": "Đăng xuất menu item" },
+    "logoutConfirm": { "selector": "[data-id=\"btn_Logout_Logout\"]", "by": "data-id", "value": "btn_Logout_Logout", "description": "Confirm logout button in modal" }
+  }
+}
