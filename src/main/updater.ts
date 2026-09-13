@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { app, BrowserWindow } from 'electron'
 import { IPC } from '../shared/ipc'
 import { debugLog } from './logger'
@@ -25,21 +26,28 @@ export function setupUpdater(): void {
     .then((mod: unknown) => {
       const autoUpdater = (mod as { autoUpdater?: unknown }).autoUpdater
         ?? (mod as { default?: { autoUpdater?: unknown } }).default?.autoUpdater
-        ?? (mod as { default?: unknown }).default as unknown as import('electron-updater').autoUpdater
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ?? (mod as { default?: unknown }).default as unknown as any
       if (!autoUpdater || typeof (autoUpdater as { checkForUpdates?: unknown }).checkForUpdates !== 'function') {
         throw new Error(`autoUpdater not found: keys=${Object.keys(mod as object).join(',')}`)
       }
       autoUpdater.autoDownload = true
       autoUpdater.autoInstallOnAppQuit = false
-      autoUpdater.logger = null as unknown as typeof autoUpdater.logger // we use debugLog instead
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      autoUpdater.logger = null as unknown as any // we use debugLog instead
 
       debugLog('[updater] setupUpdater — listeners attached, calling checkForUpdates()', `version=${app.getVersion()} resourcesPath=${process.resourcesPath}`)
       autoUpdater.on('checking-for-update', () => send({ type: 'checking-for-update' }))
-      autoUpdater.on('update-available', (info) => send({ type: 'update-available', info }))
-      autoUpdater.on('update-not-available', (info) => send({ type: 'update-not-available', info }))
-      autoUpdater.on('download-progress', (p) => send({ type: 'download-progress', progress: p }))
-      autoUpdater.on('update-downloaded', (info) => send({ type: 'update-downloaded', info }))
-      autoUpdater.on('error', (err) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      autoUpdater.on('update-available', (info: any) => send({ type: 'update-available', info }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      autoUpdater.on('update-not-available', (info: any) => send({ type: 'update-not-available', info }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      autoUpdater.on('download-progress', (p: any) => send({ type: 'download-progress', progress: p }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      autoUpdater.on('update-downloaded', (info: any) => send({ type: 'update-downloaded', info }))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      autoUpdater.on('error', (err: any) => {
         const msg = err instanceof Error ? `${err.message}\n${err.stack ?? ''}` : String(err)
         debugLog('[updater] error event', msg)
         send({ type: 'error', message: msg })
@@ -56,12 +64,14 @@ export function setupUpdater(): void {
       }, 30_000)
       void autoUpdater
         .checkForUpdates()
-        .then((r) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((r: any) => {
           settled = true
           clearTimeout(t)
           debugLog('[updater] checkForUpdates resolved', JSON.stringify(r).slice(0, 2000))
         })
-        .catch((e) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .catch((e: any) => {
           settled = true
           clearTimeout(t)
           const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e)

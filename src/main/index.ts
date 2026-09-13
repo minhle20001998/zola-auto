@@ -332,7 +332,8 @@ ipcMain.handle(IPC.updaterCheck, async () => {
     if (!autoUpdater || typeof (autoUpdater as { checkForUpdates?: unknown }).checkForUpdates !== 'function') {
       throw new Error(`autoUpdater not found in electron-updater module: keys=${Object.keys(mod as object).join(',')}`)
     }
-    const au = autoUpdater as import('electron-updater').autoUpdater
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const au = autoUpdater as any
     // ensure listeners exist even if setupUpdater was skipped for any reason
     const send = (payload: unknown) => {
       debugLog('[updaterCheck] event', JSON.stringify(payload).slice(0, 2000))
@@ -354,7 +355,8 @@ ipcMain.handle(IPC.updaterCheck, async () => {
       if (typeof target.once === 'function') (target.once as (e: string, f: (...a: unknown[])=>void)=>void)(ev, fn)
       else if (typeof target.on === 'function') (target.on as (e: string, f: (...a: unknown[])=>void)=>void)(ev, fn)
     }
-    once('error', (err) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    once('error', (err: any) => {
       settled = true
       clearTimeout(t)
       const msg = err instanceof Error ? `${err.message}\n${err.stack ?? ''}` : String(err)
@@ -365,9 +367,11 @@ ipcMain.handle(IPC.updaterCheck, async () => {
     once('update-not-available', () => { settled = true; clearTimeout(t) })
     once('update-downloaded', () => { settled = true; clearTimeout(t) })
 
-    await au.checkForUpdates().then((r) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await au.checkForUpdates().then((r: any) => {
       debugLog('[updaterCheck] checkForUpdates resolved', JSON.stringify(r).slice(0, 2000))
-    }).catch((e) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }).catch((e: any) => {
       settled = true
       clearTimeout(t)
       const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e)
@@ -384,9 +388,10 @@ ipcMain.handle(IPC.updaterCheck, async () => {
 })
 ipcMain.handle(IPC.updaterQuitAndInstall, async () => {
   const mod: unknown = await import('electron-updater')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const autoUpdater = (mod as { autoUpdater?: unknown }).autoUpdater
     ?? (mod as { default?: { autoUpdater?: unknown } }).default?.autoUpdater
-    ?? (mod as { default?: unknown }).default as unknown as import('electron-updater').autoUpdater
+    ?? (mod as { default?: unknown }).default as unknown as any
   autoUpdater.quitAndInstall()
 })
 
