@@ -29,7 +29,8 @@ export const IPC = {
   pickFolder: 'pick:folder',
   selectorsGet: 'selectors:get',
   selectorsGetPath: 'selectors:getPath',
-  selectorsReload: 'selectors:reload'
+  selectorsReload: 'selectors:reload',
+  getVersion: 'get:version'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

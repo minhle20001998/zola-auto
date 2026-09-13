@@ -95,6 +95,7 @@ export function waitForConfirm(payload: unknown): Promise<{ action: 'send' | 'sk
 }
 
 ipcMain.handle(IPC.ping, async () => 'pong from main')
+ipcMain.handle(IPC.getVersion, async () => app.getVersion())
 
 ipcMain.handle(IPC.configLoad, async () => {
   const cfg = loadConfig(getUserDataDir())
@@ -313,9 +314,17 @@ ipcMain.handle(IPC.runStop, async () => {
 })
 
 ipcMain.handle(IPC.updaterCheck, async () => {
-  if (!app.isPackaged) return { ok: true, note: 'not packaged — skip' }
+  if (!app.isPackaged) {
+    const win = BrowserWindow.getAllWindows()[0]
+    win?.webContents.send(IPC.updaterEvent, { type: 'error', message: 'Not packaged — updates only work in built exe (dist/*.exe)' })
+    win?.webContents.send(IPC.runLog, { level: 'info', at: new Date().toISOString(), message: 'Updater: not packaged — skip (only works in built exe)' })
+    return { ok: true, note: 'not packaged — skip' }
+  }
   const { autoUpdater } = await import('electron-updater')
-  await autoUpdater.checkForUpdates().catch(() => {})
+  await autoUpdater.checkForUpdates().catch((e) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    win?.webContents.send(IPC.updaterEvent, { type: 'error', message: String(e) })
+  })
   return { ok: true }
 })
 ipcMain.handle(IPC.updaterQuitAndInstall, async () => {

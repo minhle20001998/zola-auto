@@ -21,6 +21,7 @@ const api = {
   debugClearLog: (): Promise<unknown> => ipcRenderer.invoke(IPC.debugClearLog),
   readImage: (filePath: string): Promise<{ ok: boolean; data?: string; mime?: string; name?: string; error?: string }> => ipcRenderer.invoke(IPC.readImage, filePath),
   pickFolder: (): Promise<{ canceled: boolean; path?: string }> => ipcRenderer.invoke(IPC.pickFolder),
+  getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.getVersion),
   selectorsGet: (): Promise<{ selectors: unknown; path: string | null }> => ipcRenderer.invoke(IPC.selectorsGet),
   selectorsGetPath: (): Promise<{ path: string | null }> => ipcRenderer.invoke(IPC.selectorsGetPath),
   selectorsReload: (): Promise<{ selectors: unknown; path: string | null }> => ipcRenderer.invoke(IPC.selectorsReload),

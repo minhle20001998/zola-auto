@@ -16,6 +16,7 @@ interface Window {
     debugClearLog: () => Promise<unknown>
     readImage: (filePath: string) => Promise<{ ok: boolean; data?: string; mime?: string; name?: string; error?: string }>
     pickFolder: () => Promise<{ canceled: boolean; path?: string }>
+    getVersion: () => Promise<string>
     selectorsGet: () => Promise<{ selectors: unknown; path: string | null }>
     selectorsGetPath: () => Promise<{ path: string | null }>
     selectorsReload: () => Promise<{ selectors: unknown; path: string | null }>

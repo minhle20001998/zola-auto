@@ -63,12 +63,14 @@ export default function App() {
   const [debugPath, setDebugPath] = useState<string>('')
   const [tableItems, setTableItems] = useState<{ key: string; id: string; phone: string; files: string[]; rawPhone: string }[]>([])
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  const [appVersion, setAppVersion] = useState<string>('')
 
   useEffect(() => {
     window.api.ping().then((v: unknown) => setPing(String(v))).catch((e: unknown) => setPing(`error: ${String(e)}`))
     window.api.configLoad().then((c) => { if (c && typeof c === 'object') setCfg(c as AppConfig) }).catch(() => {})
     window.api.zaloLoginStatus().then((r) => setLoginStatus(r.loggedIn ? 'logged in' : 'not logged in')).catch(() => setLoginStatus('not logged in'))
     window.api.debugGetLogPath().then((r) => setDebugPath(r.path)).catch(() => {})
+    window.api.getVersion().then((v) => setAppVersion(v)).catch(() => {})
     const offLog = window.api.on('run:log', (...args: unknown[]) => {
       const entry = args[0] as { message?: string } | string
       const msg = typeof entry === 'string' ? entry : (entry as { message?: string }).message ?? JSON.stringify(entry)
@@ -273,9 +275,10 @@ export default function App() {
       <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="mx-auto flex h-14 max-w-[1600px] items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">Z</div>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm" title={appVersion ? `v${appVersion}` : undefined}>Z</div>
             <h1 className="text-lg font-semibold tracking-tight">zalo-auto</h1>
             <span className="hidden text-xs text-muted-foreground sm:inline">· {running ? 'RUNNING' : 'idle'} {progress ? `· ${progress}` : ''}</span>
+            {appVersion && <span className="hidden rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:inline">v{appVersion}</span>}
           </div>
           <div className="relative">
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full border" onClick={() => setUserMenuOpen((v) => !v)}>
@@ -469,6 +472,9 @@ export default function App() {
           </CardContent>
         </Card>
 
+        <footer className="border-t pt-4 text-center text-xs text-muted-foreground/30 select-none" title={`zalo-auto v${appVersion || ''} · ${ping}`}>
+          v{appVersion || '...'} · zalo-auto
+        </footer>
       </div>
 
       <Dialog open={!!picker} onOpenChange={(o) => !o && setPicker(null)}>

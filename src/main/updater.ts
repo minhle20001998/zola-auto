@@ -2,17 +2,21 @@ import { app, BrowserWindow } from 'electron'
 import { IPC } from '../shared/ipc'
 
 export function setupUpdater(): void {
-  if (!app.isPackaged) return
+  const send = (payload: unknown) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    win?.webContents.send(IPC.updaterEvent, payload)
+  }
+
+  if (!app.isPackaged) {
+    // In dev, still set up a no-op so the UI doesn't hang on "Checking..."
+    console.log('[updater] not packaged — skip auto check')
+    return
+  }
 
   import('electron-updater')
     .then(({ autoUpdater }) => {
       autoUpdater.autoDownload = true
       autoUpdater.autoInstallOnAppQuit = false
-
-      const send = (payload: unknown) => {
-        const win = BrowserWindow.getAllWindows()[0]
-        win?.webContents.send(IPC.updaterEvent, payload)
-      }
 
       autoUpdater.on('checking-for-update', () => send({ type: 'checking-for-update' }))
       autoUpdater.on('update-available', (info) => send({ type: 'update-available', info }))
