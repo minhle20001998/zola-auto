@@ -20,7 +20,8 @@ function getUserDataDir(): string {
 }
 
 function createWindow(): void {
-  const iconPath = app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(__dirname, '../../resources/icon.png')
+  const iconName = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+  const iconPath = app.isPackaged ? join(process.resourcesPath, iconName) : join(__dirname, `../../resources/${iconName}`)
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 780,
