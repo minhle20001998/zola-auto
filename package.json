@@ -1,6 +1,6 @@
 {
   "name": "zalo-auto",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Zalo bulk image sender — Windows desktop app",
   "main": "out/main/index.js",
   "author": "",
