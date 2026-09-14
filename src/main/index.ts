@@ -394,17 +394,13 @@ ipcMain.handle(IPC.updaterQuitAndInstall, async () => {
     win?.webContents.send(IPC.runLog, { level: 'info', at: new Date().toISOString(), message: `[updater] ${msg}${data ? ` ${JSON.stringify(data).slice(0,1200)}` : ''}` })
   }
   log('invoked', `version=${app.getVersion()} windows=${BrowserWindow.getAllWindows().length}`)
-  // close Playwright first — it holds the profile lock and keeps the app alive
+  // close Playwright first — it holds the profile lock
   try {
     await closeBrowser().catch((e) => log('closeBrowser error', String(e)))
     log('closeBrowser done')
   } catch (_e) { log('closeBrowser threw', String(_e)) }
-  // destroy all windows so NSIS FindWindow can close the app instantly
-  for (const w of BrowserWindow.getAllWindows()) {
-    try { w.destroy(); log('window destroyed', w.id) } catch (_e) { log('window destroy failed', String(_e)) }
-  }
-  log('windows destroyed, waiting 800ms for Chromium to exit')
-  await new Promise((r) => setTimeout(r, 800))
+  log('waiting 500ms for Chromium to exit')
+  await new Promise((r) => setTimeout(r, 500))
   const mod: unknown = await import('electron-updater')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const autoUpdater = (mod as { autoUpdater?: unknown }).autoUpdater
