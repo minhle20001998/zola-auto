@@ -388,22 +388,43 @@ ipcMain.handle(IPC.updaterCheck, async () => {
   return { ok: true }
 })
 ipcMain.handle(IPC.updaterQuitAndInstall, async () => {
+  const win = BrowserWindow.getAllWindows()[0]
+  const log = (msg: string, data?: unknown) => {
+    debugLog(`[updaterQuitAndInstall] ${msg}`, data as string)
+    win?.webContents.send(IPC.runLog, { level: 'info', at: new Date().toISOString(), message: `[updater] ${msg}${data ? ` ${JSON.stringify(data).slice(0,1200)}` : ''}` })
+  }
+  log('invoked', `version=${app.getVersion()} windows=${BrowserWindow.getAllWindows().length}`)
   // close Playwright first — it holds the profile lock and keeps the app alive
   try {
-    await closeBrowser().catch(() => {})
-  } catch (_e) { void _e }
+    await closeBrowser().catch((e) => log('closeBrowser error', String(e)))
+    log('closeBrowser done')
+  } catch (_e) { log('closeBrowser threw', String(_e)) }
   // destroy all windows so NSIS FindWindow can close the app instantly
   for (const w of BrowserWindow.getAllWindows()) {
-    try { w.destroy() } catch (_e) { void _e }
+    try { w.destroy(); log('window destroyed', w.id) } catch (_e) { log('window destroy failed', String(_e)) }
   }
+  log('windows destroyed, waiting 800ms for Chromium to exit')
   await new Promise((r) => setTimeout(r, 800))
   const mod: unknown = await import('electron-updater')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const autoUpdater = (mod as { autoUpdater?: unknown }).autoUpdater
     ?? (mod as { default?: { autoUpdater?: unknown } }).default?.autoUpdater
     ?? (mod as { default?: unknown }).default as unknown as any
-  // isSilent=false, isForceRunAfter=true — ensures installer runs after quit
-  autoUpdater.quitAndInstall(false, true)
+  log('calling quitAndInstall', `isSilent=false isForceRunAfter=true cachedUpdate=${JSON.stringify((autoUpdater as any).cachedUpdateFile ?? null).slice(0,500)}`)
+  try {
+    autoUpdater.quitAndInstall(false, true)
+    log('quitAndInstall called — app should quit now, installer spawning')
+    // if app hasn't quit in 5s, NSIS likely showed the Retry dialog — log it
+    setTimeout(() => {
+      log('still alive 5s after quitAndInstall — NSIS likely showed "cannot be closed" Retry dialog. Check if installer is blocked by lingering process')
+      win?.webContents.send(IPC.updaterEvent, { type: 'error', message: 'quitAndInstall did not quit in 5s — NSIS Retry dialog likely visible. Check debug.log and close app manually then Retry' })
+    }, 5000)
+  } catch (e) {
+    const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e)
+    log('quitAndInstall threw', msg)
+    win?.webContents.send(IPC.updaterEvent, { type: 'error', message: msg })
+    throw e
+  }
 })
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
