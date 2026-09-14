@@ -10,12 +10,18 @@ if (!app.isPackaged) process.env.PLAYWRIGHT_BROWSERS_PATH = '0'
 
 function resolveBrowsersPath(): string | undefined {
   if (app.isPackaged) {
+    // short path shipped via extraResources (avoids MAX_PATH during NSIS --updated uninstall)
+    const short = join(process.resourcesPath, 'browsers')
+    if (existsSync(short)) return short
     const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'playwright-core', '.local-browsers')
     if (existsSync(unpacked)) return unpacked
     const alt = join(process.resourcesPath, 'node_modules', 'playwright-core', '.local-browsers')
     if (existsSync(alt)) return alt
     return undefined
   }
+  // dev: prefer repo resources/browsers (same layout as packaged), else node_modules
+  const dev = join(app.getAppPath(), 'resources', 'browsers')
+  if (existsSync(dev)) return dev
   return '0'
 }
 

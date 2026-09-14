@@ -59,8 +59,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
+// best-effort only — must never block/cancel quit, otherwise NSIS cannot overwrite zalo-auto.exe
 app.on('before-quit', () => {
-  void closeBrowser()
+  void closeBrowser().catch(() => {})
 })
 
 ipcMain.on(IPC.zaloPickCandidateResponse, (_e, choice: number | 'skip') => {
@@ -145,6 +146,8 @@ ipcMain.handle(IPC.zaloLoginStatus, async () => {
       const { chromium } = await import('playwright')
       const browsersPath = (() => {
         if (app.isPackaged) {
+          const short = join(process.resourcesPath, 'browsers')
+          if (existsSync(short)) return short
           const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'playwright-core', '.local-browsers')
           if (existsSync(unpacked)) return unpacked
           const alt = join(process.resourcesPath, 'node_modules', 'playwright-core', '.local-browsers')
@@ -394,27 +397,30 @@ ipcMain.handle(IPC.updaterQuitAndInstall, async () => {
     win?.webContents.send(IPC.runLog, { level: 'info', at: new Date().toISOString(), message: `[updater] ${msg}${data ? ` ${JSON.stringify(data).slice(0,1200)}` : ''}` })
   }
   log('invoked', `version=${app.getVersion()} windows=${BrowserWindow.getAllWindows().length}`)
-  // close Playwright first — it holds the profile lock
+  // close Playwright first so no bundled chrome.exe keeps resources/ locked
   try {
-    await closeBrowser().catch((e) => log('closeBrowser error', String(e)))
-    log('closeBrowser done')
+    await Promise.race([
+      closeBrowser().catch((e) => log('closeBrowser error', String(e))),
+      new Promise((r) => setTimeout(r, 4000))
+    ])
+    log('closeBrowser done (or timed out)')
   } catch (_e) { log('closeBrowser threw', String(_e)) }
-  log('waiting 500ms for Chromium to exit')
-  await new Promise((r) => setTimeout(r, 500))
   const mod: unknown = await import('electron-updater')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const autoUpdater = (mod as { autoUpdater?: unknown }).autoUpdater
     ?? (mod as { default?: { autoUpdater?: unknown } }).default?.autoUpdater
     ?? (mod as { default?: unknown }).default as unknown as any
-  log('calling quitAndInstall', `isSilent=false isForceRunAfter=true cachedUpdate=${JSON.stringify((autoUpdater as any).cachedUpdateFile ?? null).slice(0,500)}`)
+  log('calling quitAndInstall', 'isSilent=false isForceRunAfter=true')
   try {
+    // spawns installer detached, then schedules app.quit()
     autoUpdater.quitAndInstall(false, true)
-    log('quitAndInstall called — app should quit now, installer spawning')
-    // if app hasn't quit in 5s, NSIS likely showed the Retry dialog — log it
+    log('quitAndInstall called — installer spawned; hard-exiting shortly to release zalo-auto.exe lock')
+    // NSIS extractAppPackage.nsh CopyFiles retries 5x1s; if graceful app.quit() is slow the exe stays
+    // locked and NSIS shows "zalo-auto cannot be closed". Force-exit to guarantee the lock is released.
     setTimeout(() => {
-      log('still alive 5s after quitAndInstall — NSIS likely showed "cannot be closed" Retry dialog. Check if installer is blocked by lingering process')
-      win?.webContents.send(IPC.updaterEvent, { type: 'error', message: 'quitAndInstall did not quit in 5s — NSIS Retry dialog likely visible. Check debug.log and close app manually then Retry' })
-    }, 5000)
+      log('hard exit now (app.exit(0))')
+      app.exit(0)
+    }, 1500)
   } catch (e) {
     const msg = e instanceof Error ? `${e.message}\n${e.stack ?? ''}` : String(e)
     log('quitAndInstall threw', msg)

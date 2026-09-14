@@ -18,13 +18,13 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - name: Install Playwright Chromium (bundled)
+      - name: Install Playwright Chromium (bundled, short path)
         run: npx playwright install chromium
         env:
-          PLAYWRIGHT_BROWSERS_PATH: '0'
+          # must match electron-builder.yml extraResources (resources/browsers -> browsers)
+          PLAYWRIGHT_BROWSERS_PATH: resources/browsers
       - name: Build and publish
         run: npm run package -- --publish always
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PLAYWRIGHT_BROWSERS_PATH: '0'

@@ -6,9 +6,12 @@ directories:
 files:
   - out/**
   - '!**/*.map'
-asarUnpack:
-  - "**/node_modules/playwright-core/.local-browsers/**"
 extraResources:
+  # keep browsers at a SHORT path (resources/browsers) — deep node_modules paths
+  # exceed Windows MAX_PATH when electron-builder's NSIS --updated uninstall
+  # renames files into $PLUGINSDIR\old-install, which breaks auto-update
+  - from: resources/browsers
+    to: browsers
   - from: resources/selectors.json
     to: selectors.json
   - from: resources/icon.png

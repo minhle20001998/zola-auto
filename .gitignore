@@ -3,6 +3,7 @@ out
 dist
 dist2
 dist3
+resources/browsers
 reports
 .playwright
 *.log
