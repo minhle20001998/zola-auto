@@ -388,16 +388,21 @@ ipcMain.handle(IPC.updaterCheck, async () => {
   return { ok: true }
 })
 ipcMain.handle(IPC.updaterQuitAndInstall, async () => {
+  // close Playwright first — it holds the profile lock and keeps the app alive
   try {
     await closeBrowser().catch(() => {})
   } catch (_e) { void _e }
-  // give chromium a moment to release the profile lock
-  await new Promise((r) => setTimeout(r, 500))
+  // destroy all windows so NSIS FindWindow can close the app instantly
+  for (const w of BrowserWindow.getAllWindows()) {
+    try { w.destroy() } catch (_e) { void _e }
+  }
+  await new Promise((r) => setTimeout(r, 800))
   const mod: unknown = await import('electron-updater')
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const autoUpdater = (mod as { autoUpdater?: unknown }).autoUpdater
     ?? (mod as { default?: { autoUpdater?: unknown } }).default?.autoUpdater
     ?? (mod as { default?: unknown }).default as unknown as any
+  // isSilent=false, isForceRunAfter=true — ensures installer runs after quit
   autoUpdater.quitAndInstall(false, true)
 })
 
