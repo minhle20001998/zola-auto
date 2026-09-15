@@ -21,6 +21,7 @@ extraResources:
 win:
   icon: resources/icon.ico
   sign: null
+  # rcedit is done in scripts/afterPack.js (avoids winCodeSign extraction needing admin)
   signAndEditExecutable: false
   target:
     - target: nsis
